@@ -22,6 +22,11 @@
       padding: 10px;
       font-family: sans-serif;
     }
+    video {
+      display: block;
+      margin-top: 20px;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -32,47 +37,54 @@
   <script>
     Telegram.WebApp.ready();
 
-    // Listen for the button click
     document.getElementById('takeSelfie').addEventListener('click', async () => {
       const video = document.getElementById('v');
       const canvas = document.getElementById('c');
+      let stream;
 
       try {
         // Request camera access
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
-        await video.play();
+        video.style.display = 'block';  // Show the video preview
 
-        // Once video is playing, capture the first frame
+        // Wait for the video to load and then take a snapshot
         video.addEventListener('loadeddata', async () => {
+          // Draw the video frame to the canvas
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           canvas.getContext('2d').drawImage(video, 0, 0);
 
-          // Stop camera stream
+          // Stop the camera stream to save resources
           stream.getTracks().forEach(t => t.stop());
+          video.style.display = 'none';  // Hide the video after capturing
 
-          // Get user's geolocation
+          // Now, get the geolocation data
           navigator.geolocation.getCurrentPosition(pos => {
+            // Prepare the data payload to send to the bot
             const payload = {
               image: canvas.toDataURL('image/jpeg'),
-              location: {
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude
-              },
+              location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
               date: new Date().toISOString()
             };
 
-            // Send data to Telegram bot
+            console.log("Sending data to the bot:", payload);  // Debug log
+
+            // Send data back to the Telegram bot
             Telegram.WebApp.sendData(JSON.stringify(payload));
+
+            // Close the Web App after sending the data
             Telegram.WebApp.close();
-          }, err => {
-            alert("Error accessing location: " + err.message);
+          }, (err) => {
+            console.error('Error getting location:', err.message);  // Log geolocation error
+            alert('Location access denied or error occurred.');
             Telegram.WebApp.close();
           });
         });
+
       } catch (error) {
-        alert("Error accessing camera: " + error.message);
+        console.error('Error accessing camera:', error.message);  // Log camera error
+        alert('Error accessing camera: ' + error.message);
         Telegram.WebApp.close();
       }
     });
